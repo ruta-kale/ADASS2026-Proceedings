@@ -34,11 +34,11 @@
 % Use mixed case type for the shortened title
 % Ensure shortened title does not cause an overfull hbox LaTeX error
 % See ASPmanual2010.pdf 2.1.4  and ManuscriptInstructions.pdf for more details
-\markboth{Author1, Author2, and Author3}{Short Title}
+\markboth{Ruta Kale}{Towards reliable batch processing}
 
 \begin{document}
 
-\title{ADASS Author Template with Long Title}
+\title{Towards Reliable Batch Data Processing for the SKA Science Data Processor[DRAFT]}
 
 % Note the position of the comma between the author name and the 
 % affiliation number.
@@ -49,14 +49,14 @@
 % authors share an affiliation this should be in a single \affil which can then
 % be referenced for several author names. If only one affiliation, no footnotes are needed.
 % See ManuscriptInstructions.pdf and ASP's manual2010.pdf 3.1.4 for more details
-\author{Sample~Author1,$^1$ Sample~Author2,$^2$ and Sample~Author3$^2$}
-\affil{$^1$Institution Name, Institution City, State/Province, Country; \email{AuthorEmail@email.edu}}
-\affil{$^2$Institution Name, Institution City, State/Province, Country}
+\author{Ruta~Kale,$^{1,2}$}
+\affil{$^1$SKA Observatory, Jodrell Bank, Lower Withington, Macclesfield, Cheshire, SK11 9FT, United Kingdom; \email{ruta.kale@skao.int}}
+\affil{$^2$National Centre for Radio Astrophysics, Tata Institute of Fundamental Research, Savitribai Phule Pune University Campus, Ganeshkhind, Pune 411007 Maharashtra, India}
 
 % This section is for ADS Processing.  There must be one line per author. paperauthor has 9 arguments.
-\paperauthor{Sample~Author1}{Author1Email@email.edu}{ORCID_Or_Blank}{Author1 Institution}{Author1 Department}{City}{State/Province}{Postal Code}{Country}
-\paperauthor{Sample~Author2}{Author2Email@email.edu}{ORCID_Or_Blank}{Author2 Institution}{Author2 Department}{City}{State/Province}{Postal Code}{Country}
-\paperauthor{Sample~Author3}{Author3Email@email.edu}{ORCID_Or_Blank}{Author3 Institution}{Author3 Department}{City}{State/Province}{Postal Code}{Country}
+\paperauthor{Ruta~Kale}{ruta.kale@skao.int}{https://orcid.org/0000-0003-1449-3718}{SKA Observatory}{Author1 Department}{City}{Cheshire}{SK119FT}{United Kingdom}
+%\paperauthor{Sample~Author2}{Author2Email@email.edu}{ORCID_Or_Blank}{Author2 Institution}{Author2 Department}{City}{State/Province}{Postal Code}{Country}
+%\paperauthor{Sample~Author3}{Author3Email@email.edu}{ORCID_Or_Blank}{Author3 Institution}{Author3 Department}{City}{State/Province}{Postal Code}{Country}
 
 % There should be one \aindex line (commented out) for each author. These are used to
 % build up the author index for the Proceedings. The surname must come first, followed by
@@ -72,9 +72,18 @@
 
 
 \begin{abstract}
-This is the ADASS 2025 author template file.  This is based on the
-Astronomical Society of the Pacific (ASP) 2021 template, but has been
-modified to reflect the specific ADASS requirements.
+The SKA Science Data Processor (SDP) must turn large visibility datasets
+into scientifically validated images within finite computing and storage
+resources. We describe the operational context, processing scale and
+emerging batch-workflow design. Illustrative data volumes and image
+dimensions show why memory use and data movement matter alongside compute.
+Modular scientific stages, explicit interfaces and Measurement Set version
+4 (MSv4) support evolving calibration and imaging methods. Reproducible
+configuration, provenance and recoverable execution connect this design
+to delivery from commissioning through science operations. We identify
+validation priorities for scientific correctness, restart behaviour and
+throughput; these are design objectives, rather than measured pipeline
+performance or demonstrated production readiness.
 \end{abstract}
 
 % These lines show examples of subject index entries. At this stage these have to commented
@@ -91,137 +100,181 @@ modified to reflect the specific ADASS requirements.
 % Don't leave these in! - replace them with ones relevant to your paper.
 %\ooindex{FOOBAR, ascl:1101.010}
 
+\section{Introduction}
+The Square Kilometre Array Observatory (SKAO) is constructing SKA-Low in
+Western Australia (50--350 MHz) and SKA-Mid in the South African Karoo
+(0.35--15.4 GHz). The SKA-Low is an aperture array\footnote{256 individual antenna elements together form a station, and the telescope is an array of stations.} and the SKA-Mid is an array of dishes.
+The Array Assemblies (AAs) provide successive configurations of the telescopes as the construction progresses:
+Low-AA2 has 64 Low stations and Mid-AA2 has 64 dishes; the construction scope comprises
+257 Low stations at AA$^*$ (Mod) and 144 Mid dishes at AA$^*$. The full
+AA4 design has 512 stations and 197 dishes, but is not a committed
+construction stage. Mid AA$^*$ and AA4 include 64 MeerKAT
+dishes\footnote{\raggedright\url{https://www.skao.int/en/science-users/118/ska-telescope-specifications}}.
 
-\section{The Template}
-To fill in this template, make sure that you read and follow the ASPCS Instructions for Authors and Editors available for download online. Further hints and tips for including graphics, tables, citations, and other formatting helps are available there. With this template, you should have received a copy of the specific ADASS manuscript instructions, and you should also read these.
+Interferometers record complex correlations, or visibilities. Calibration
+estimates instrumental and propagation effects; imaging reconstructs sky
+brightness from incomplete spatial-frequency sampling. The broad scope of Science Data Processor starts from getting a request for observations from the user, processing it to make the observations, perform real time and batch processing and deliver the data products to the user. The aspect on which is contribution focuses is batch processing - the part where the SDP performs calibration and imaging
+and manages the resulting data products. Reliable batch processing must
+ preserve scientific validity while capabilities and algorithms
+evolve. Following \citet{Rees2019}, we treat software quality as both a
+scientific and an operational requirement.
 
-\subsection{The Author Checklist}
-The following checklist should be followed when writing a submission to a conference proceedings to be published by the ASP for ADASS. The references are to sections in the ADASS manuscript instructions.\footnote{Most URLs should be in a footnote like this one.  In this case, you can download the online material from \url{http://www.adass.org}.} 
+\section{Operational Context and Scale}
+Users specify products and processing requirements during proposal submission and if the proposal is successful, the observations are carried out, the data are processed and data products are delivered. All of these steps are orchestrated through the SDP. The SDP creates observation-level products for
+quality assessment (QA) and delivery to the SKA Regional Centre Network
+(SRCNet), where users perform further analysis 
+%Routine raw and intermediate data are planned to be deleted after all
+%planned processing that needs them has completed
+\footnote{\raggedright
+SKAO Science Data Products: A Summary, revision 02 (2025):
+\url{https://www.skao.int/en/science-users/649/skao-science-data-products}}.
+Provenance and QA must therefore support confidence in products before
+their inputs are discarded. Our focus is imaging, rather than all SDP modes.
 
-\begin{itemize}
-\checklistitemize
+For $N$ stations or dishes, the number of cross-correlation baselines is
+$N_{\rm bl}=N(N-1)/2$, excluding autocorrelations. The visibility payload is
+$V_{\rm vis}=N_{\rm bl}N_tN_{\rm chan}N_{\rm pol}b$, where the remaining
+factors count time samples, channels, correlation products and bytes per
+complex value. For one hour, one-second sampling, 4,096 channels, four
+products and eight bytes per complex value, AA2 has 2,016 baselines and
+0.95 TB for either telescope. Low AA$^*$ (Mod) has 32,896 baselines and
+15.52 TB; Mid AA$^*$ has 10,296 baselines and 4.86 TB. These represent
+16.32- and 5.11-fold increases over AA2. Full-design AA4 gives 130,816
+baselines and 61.73 TB for Low, and 19,306 baselines and 9.11 TB for Mid.
+These decimal-terabyte payloads exclude flags, weights, metadata and
+storage overhead and thus are minimal estimates; actual volumes depend on sampling, averaging and duration.
 
-\item References must all use BibTeX entries in a .bib file. No use of \verb"\bibitem"! (Even though some older ASP templates have them.) (See References.)
-\item All references must be cited in the text, usually using \verb"\citet" or \verb"\citep".  Do not use \verb"\cite". (See References.)
-\item No LaTeX warnings. Particularly, no overfull hboxes or unresolved references. (See LaTeX warnings and errors.)
-\item No use of \verb"\usepackage" except for \verb"\usepackage{asp2023}". (See LaTeX packages and commands.)
-\item No use of \verb"\renewcommand" or \verb"\renewenvironment". (See LaTeX packages and commands.)
-\item Arguments to \verb"\citep" etc., should use ADS type references where possible, fall back on <author><year> or something suitably unique if not. (See References.)
-\item References in the text are all generated automatically (using \verb"\citep" etc), not put in explicitly as ordinary text that just looks like a generated reference. (See References.)
-\item Definitely no LaTeX errors. (See LaTeX warnings and errors.)
-\item Paper is the right length. References don't spill over into one more page. (See Length of Paper.)
-\item Paper has an abstract. (See Length of Paper.)
-\item References are to things that actually exist and can be expected to continue to exist. Not papers ``in preparation'' or URLs for blog items. (See References.)
-\item Graphics files have to be .eps encapsulated Postscript format. Yes they do! Sorry, but they do. (See Figures.)
-\item Name all the files properly:- figures are <paper>\_f<n>.eps, eg O1-3\_f1.eps. Paper names use dashes not periods, O1-3.tex not O1.3.tex. Posters now use the same naming convention as oral papers, e.g.\ X3-21. (See File names and Paper IDs.)
-\item Figure captions should make sense if the figure is printed in monochrome - because it will be! (See Figures.)
-\item Figures are legible at the size ADASS Proceedings volumes are printed, which is quite small. (See Figures.)
-\item Copyright forms signed and filled out - don't use electronic signatures. (See Miscellany.)
-\item Author lists follow the correct format: comma separated, with an `and' for the final author. (See Authors and Affiliations.)
-\item The first author of the paper must be the person who presented the paper at the conference. (See Authors and Affiliations.)
-\item No repetition of affiliations - list each organisation once, with multiple e-mail addresses if you really must. (See Authors and Affiliations.)
-\item Running heads should fit in the same horizontal space as the text does, not pushing the page numbers over to the right. (See LaTeX warnings and errors.)
-\item Run through a spelling checker. (I know that can be tricky with LaTeX.) (See Content and Typesetting.)
-\item Proofread, or have the text proofread, to check for proper English usage. In particular, note that ``allows to'' is not conventional English, and English uses articles (`a',`an',`the') in places where other languages, particularly Eastern European languages, don't have them. (See Content and Typesetting.)
-\end{itemize}
+Simplistically adopting the field of view as $\theta_{\rm FoV}=\lambda/D$ and resolution as
+$\theta_{\rm res}=\lambda/B_{\max}$, and the cellsize as 
+$\theta_{\rm cell}=\theta_{\rm res}/3$, an image covering the field at the
+band minimum with cells set at the band maximum has width
+\begin{equation}
+ N_{\rm pix}=\frac{3B_{\max}}{D}\frac{\nu_{\max}}{\nu_{\min}}.
+ \label{eq:imagewidth}
+\end{equation}
+The D denotes station or dish diameter and $B_{max}$ denotes the longest baseline. The wavelength $\lambda$ for the field of view calculation is corresponding to the lowest frequency of the observing band and for the resolution calculation is considered to be the one corresponding to the highest frequency of the band to underline the effect of the wide bandwidths. These are taken for illustrative purpose and will depend in practice on the observing parameters and the science goal.
+For Low, $D=39$ m and adopted maximum baselines of 39 km (AA2) and
+73.4 km (AA$^*$ (Mod)/AA4) give widths of 21,000 and approximately
+39,500 pixels across 50--350 MHz.  Resolution goes from 31.71 to
+4.53 arcsec across the band for AA2, and from 16.85 to 2.41 arcsec for
+AA$^*$ (Mod). For Mid, $D=15$ m and the adopted AA2/AA$^*$ baseline is
+108 km including SKA008, or 36 km without it. Band 1 (0.35--1.05 GHz)
+then gives widths of 64,800 or 21,600 pixels, respectively, and upper-edge
+resolutions of 0.55 or 1.64 arcsec. Thus the adopted Mid resolution and
+image width do not change between AA2 and AA$^*$. Mid AA4 uses
+159.6 km, unaffected by
+SKA008, and gives 95,760 pixels: about 9.2 billion pixels per square image
+plane. Band 2 (0.95--1.76 GHz) gives approximately 40,000, 13,300 and
+59,100 pixels for these three Mid cases. 
+%MeerKAT's 13.5 m dishes have
+%a different primary beam. These are sizing illustrations; science goals,
+%source distribution, bandwidth, weighting, padding and faceting determine
+%the operational image layout.
 
-\section{Compiling}
-It is highly recommended that all figures be non-`eps' format, i.e., `png' or `jpg.'  For this case, compiling this article is done simply by using the command \texttt{pdflatex} at least twice on the command line from inside the same folder as the article LaTeX `.tex' file.  If there are references to `eps' image files, pdfLaTeX will not work, and the images should be converted to a non-`eps' type of image file format.
+% AUTHOR CHECK: confirm the approved hardware specification and publication permission.
+The SDP hardware for SKA-Low is in the phase of testing a scalable unit.
+The supplied Low AA2 scalable-unit has 124 dual-socket nodes,
+two Intel Xeon 6 6972P processors per node and 23,808 CPU cores.
+Its 768 GB per node totals approximately 95 TB, with about 1.75 PFLOP/s
+peak FP64 and 10 PB raw DDN Lustre storage from 415 24-TB disks.
+Four network fabrics and a shared core support expansion are planned. These are
+platform specifications, not pipeline benchmarks: usable storage is lower,
+and throughput depends on memory access, I/O and algorithm efficiency. The batch processing needs to work within the constraints of these specifications.
 
-\section{Text}
-Sometimes you just need to have different styles of fonts.  \emph{Sometimes you just need to have different styles of fonts.} \textbf{Sometimes you just need to have different styles of fonts.}
+\section{Workflow Interfaces and Recovery}
+Batch stages include preprocessing, instrumental calibration, iterative
+self-calibration, and continuum or spectral-line imaging. Their ordering
+follows the scientific recipe for the planned data products.
+Figure~\ref{fig:architecture} separates scientific intent, workflow state
+and resource execution. Recipes specify operations and dependencies.
+Workflow control tracks readiness and requests resources through execution adapters.
+Resolved configurations identify data selection, algorithm parameters,
+execution settings and defaults. Interfaces must specify scientific inputs,
+solution validity, partitioning assumptions, output schemas and completion
+criteria. Dataset locations alone do not establish whether data are observed
+or corrected, which flags and weights apply, or whether a product is complete. The batch processing needs to be scalable and current algorithms have limitations. Thus the pipelines need to have the flexibility to adapt new algorithms as they are developed. 
 
-Sometimes you just need to have different sizes of fonts.  {\small Sometimes you just need to have different sizes of fonts.} {\footnotesize Sometimes you just need to have different sizes of fonts.}  It would be very rare to require larger fonts within an ASP volume.
+\begin{figure}[ht]
+\centering
+\setlength{\unitlength}{1mm}
+\footnotesize
+\begin{picture}(130,43)
+\put(1,30){\framebox(41,11){\shortstack{Recipe and parameters\\Scientific intent}}}
+\put(49,30){\framebox(33,11){\shortstack{Workflow control\\Dependencies and state}}}
+\put(89,30){\framebox(40,11){\shortstack{Execution adapters\\Compute and storage}}}
+\put(42,35){\vector(1,0){7}}
+\put(82,35){\vector(1,0){7}}
+\put(65,30){\vector(0,-1){7}}
+\put(49,12){\framebox(33,11){\shortstack{Scientific stages\\Calibration / imaging}}}
+\put(89,12){\framebox(40,11){\shortstack{Data interfaces\\MSv4 / stage products}}}
+\put(82,17){\vector(1,0){7}}
+\put(1,0){\framebox(128,7){Proposed shared records: provenance, status, logs and quality assessment}}
+\end{picture}
+\caption{Conceptual batch framework. Arrows indicate coordination and
+interfaces, not visibility-data transport or deployed-service status.}
+\label{fig:architecture}
+\end{figure}
 
-Do \emph{not} reduce the size of the main text font to try to squeeze more content into the paper. It will be restored by the editors and the paper will be rejected as too long.
+There are several limitations of the "MSv2" format of the visibilities that is currently in use. Thus a new scalable format, MSv4, is being developed through a global collaboration.
+MSv4 represents visibilities as labelled arrays with time, baseline,
+frequency and polarisation coordinates; related datasets form a Processing
+Set. XRADIO supplies implementation, access and conversion
+tools\footnote{\raggedright
+\url{https://xradio.readthedocs.io/en/latest/measurement_set/overview.html}},
+through collaboration among CASA partners NRAO, ESO, NAOJ and JIVE,
+SKAO and SARAO. XRADIO supports selective, lazy loading and distributed
+processing; Zarr provides chunked, compressed arrays and object-storage
+access. 
+%Chunk sizes must match algorithm access patterns and working sets.
+%MSv2 conversion requires checks on coordinates, flags, weights and metadata
+%because the models are not backward compatible. These capabilities do not
+%establish production readiness: batch-preprocessing version 2.7.3 describes
+%its XRADIO path as experimental and outside the end-to-end
+%pipeline\footnote{\raggedright
+%\url{https://developer.skao.int/projects/ska-sdp-batch-preprocess/en/2.7.3/xradio_pipeline.html}}.
 
-\section{Math}
-Sometimes authors include formulas inside the main text which should always be enclosed within \$ signs.  Look at the Pythagorean Formula $a^2 + b^2 = c^2$.
+The batch pipelines in addition need to be resilient.
+Validated stage outputs provide recovery boundaries, avoiding a complete
+restart after failure. Retries must identify inputs and configuration,
+protect completed products and reject partial outputs. Checkpoint placement
+balances recomputation against additional writes and storage. Provenance
+must link input identifiers, software versions, resolved configuration,
+calibration products and model history to workflow state, logs and QA.
+Reproducibility requires scientific tolerances, rather than necessarily
+bitwise equality across hardware or parallel reduction orders. These are
+design requirements, not evidence that every recovery path is implemented.
 
-Sometimes authors include formulas on their own lines.  This example uses the \verb"displaymath" environment which does not include an equation number.  To include an equation number, use the \verb"equation" environment.
-\begin{displaymath}
-c = \sqrt{a^2 + b^2} \qquad \textrm{Pythagorean Theorem}
-\end{displaymath}
+\section{Delivery and Validation}
+The batch pipelines need to satisfy requirements ranging from science commissioning of the telescopes, the science verification phase and through the science operations.
+Commissioning needs rapid configuration changes, diagnostics and repeatable
+reprocessing. Production workflows can be useful for the global sky model survey. Low AA2 science verification adds the requirement of production workflows for available observing modes and throughput matched to the observing plan. Science operations broadens the supported modes which the batch pipelines need to be ready for. The framework of batch pipeline  must also accommodate
+algorithm evolution and both telescopes throughout this progression.
 
-\section{Lists}
-\label{ex_lists}
-There are a lot of ways to make lists including itemized lists with bullets, for which you use  (\verb"\begin{itemize}"), numbered lists (\verb"\begin{enumerate}"), and description lists (\verb"\begin{description}").  This is an example of an itemized list.
+Validation must test four aspects together: scientific correctness through
+reference comparisons of flux recovery, noise and spectral fidelity; safe
+recovery through failure injection and restart tests; platform fit through
+wall time, peak memory, I/O and storage measurements; and scaling through
+representative observations and multi-node runs under realistic concurrency.
+More workers may expose contention as well as parallelism. A successful run
+is necessary; repeatable science and sustained throughput establish readiness.
 
-\subsection{Itemized Lists}
-Here is an itemized list:
-\begin{itemize}
-\item Item 1
-\item Item 2
-\end{itemize}
+\section{Conclusions}
+The SKAO SDP is set to deliver reliable batch processing through the phases of science commissioning, science verification and science operations. The reproducible configuration, provenance and recoverable execution connect the design to delivery from commissioning through science operations.
+
+%Visibility volumes and image dimensions make memory use and data movement
+%central to SDP batch processing. Modular stages, explicit MSv4 interfaces
+%and separate execution control allow algorithms to evolve within a stable
+%framework. Reproducible configuration, provenance and recoverable workflows
+%must be tested on representative workloads. The goal is trusted,
+%scientifically validated products from commissioning through science
+%operations as the telescopes and processing methods evolve.
+
+%\bibliography{references}
+
+%%%%%%%%%%%
 
 
-\section{Table}
-Here is an example table that has three colums with various justification and row spacing.
-
-\begin{table}[!ht]
-\caption{Tables in \LaTeXe}
-\smallskip
-\begin{center}
-{\small
-\begin{tabular}{llc}  % l = left, c = centered
-\tableline
-\noalign{\smallskip}
-First Column & Second Column & Third Column:\\
-\noalign{\smallskip}
-\tableline
-\noalign{\smallskip}
-First Row, First Column & First Row, Second Column & First Row, Third Column \\
-Second Row, First Column & Second Row, Second Column & Second Row, Third Column \\
-Third Row, First Column & Third Row, Second Column & Third Row, Third Column \\
-\noalign{\smallskip}
-\tableline % Sometimes you just need a line between table rows
-\noalign{\smallskip}
-Fourth Row, First Column & ~ & Fourth Row, Third Column \\ % Sometimes you have empty cells
-\noalign{\smallskip} % Sometimes you just need space between table rows
-Fifth Row First Column & Fifth Row, Second Column & Fifth Row, Third Column\\ % No \\ if the last row
-\noalign{\smallskip}
-\tableline\
-\end{tabular}
-}
-\end{center}
-\end{table}
-\noindent These tables can get a little messy, but this format is the most common.
-
-\section{Images}
-For some figures, see Figures \ref{ex_fig1}- \ref{ex_fig3}.
-
-These figures have been converted to the `png' image format.  Notice
-that the references to the figures do not need to include the file
-extension and that the pdfLaTeX compiler recognizes the non-`eps'
-image files.
-
- 
-\articlefigure[width=0.65\textwidth]{example.jpg}{ex_fig1}{Welcome to 1365.  Size adjusted to be a little smaller than full.}
-% It is possible to reduce the size of a figure among other changes (see the instructions).  Here is an example:
-% \articlefigure[width=.5\textwidth]{example_image}{ex_fig1_reduced}{Welcome to 1953 a little smaller.}
-
-\articlefiguretwo{example}{example}{ex_fig2}{Now there are two of them.  \emph{Left:} An image from long ago.  \emph{Right:} The same exact thing.}
-% There is a figure command allowing for three figures:
-% \articlefigurethree{example.eps}{example.eps}{example.eps}{ex_fig1_triple}{Now there are three of them.}
-
-\articlefigurefour{example}{example}{example}{example}{ex_fig3}{Now four of them?}
-
-\clearpage % To force this stuff to happen by this point in the text, otherwise these will probably end up after the references.
-
-There are also the landscape versions \verb"\articlelandscapefigure" and \\
-\verb"\articlelandscapefiguretwo" which are further described in the instructions.
-
-\section{References}
-References must be provided in BibTeX format, in a .bib file, and should usually be referenced using \verb"\citet" or \verb"\citep". The file example.bib supplied with this template is taken from an ADASS 2015 paper, and includes references to previous ADASS proceedings 
-\citep[such as][]{1999ASPC..172..487P} and to papers in what was then the current 2015 proceedings (e.g.\ \citet{O11-4_adassxxv}). Note that the `TBD' entries that appear for papers in the current proceedings will be dealt with by the ADASS editors when the final volume is produced. The example .bib file has a large number of references unused by this template file; such unused references have been left in as an example, but should be removed before a paper is submitted.
-
-\section{Conference Photographs}
-
-At the end of this template you may find a commented line with the bookpartphoto where the editors could decided to add a conference photo,
-might there be enough room at the end of your paper. Leave this comment in, do not supply your own photos in this paper but contact the editors
-if you have some interesting shots.
-
-\acknowledgements The ASP would like to thank the dedicated researchers who are publishing with the ASP.  It will make things a lot easier if you keep this text on the same line as the \verb"\acknowledgements" command. Place it just before the bibliography. It's optional of course.
+\acknowledgements We recognise and acknowledge the Indigenous peoples and cultures that have traditionally lived on the lands on which our facilities are located. 
 
 
 \bibliography{C409}  % For BibTex
