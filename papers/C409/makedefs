@@ -2,6 +2,6 @@
 P = C409
 V = 1
 A = Kale
-E = you@example.edu
+E = ruta.kale@skao.int
 # your figures, named C409_f1.eps, C409_f2.png, ...
 FIGS = $(filter-out C409_inc.tex,$(wildcard C409_*))
